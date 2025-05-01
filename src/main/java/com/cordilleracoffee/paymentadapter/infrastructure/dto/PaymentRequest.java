@@ -2,6 +2,7 @@ package com.cordilleracoffee.paymentadapter.infrastructure.dto;
 
 import jakarta.validation.constraints.*;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public record PaymentRequest(@NotBlank(message = "Payment method is required")
@@ -15,7 +16,7 @@ public record PaymentRequest(@NotBlank(message = "Payment method is required")
                              String cardNumber,
 
                              @NotBlank(message = "Expiration date is required")
-                             @Pattern(regexp = "(0[1-9]|1[0-2])/[0-9]{2}",
+                             @Pattern(regexp = "(0[1-9]|1[0-2])/\\d{2}",
                                      message = "Expiration date must be in MM/YY format")
                              String expirationDate,
 
@@ -31,7 +32,7 @@ public record PaymentRequest(@NotBlank(message = "Payment method is required")
                              @NotNull(message = "Amount is required")
                              @Positive(message = "Amount must be positive")
                              @DecimalMax(value = "1000000", message = "Amount must be less than 1,000,000")
-                             Double amount,
+                             BigDecimal amount,
 
                              @NotBlank(message = "Currency is required")
                              @Size(min = 3, max = 3, message = "Currency must be 3 characters")
