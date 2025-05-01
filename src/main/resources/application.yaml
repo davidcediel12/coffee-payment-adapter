@@ -1,3 +1,9 @@
 spring:
   application:
     name: paymentadapter
+
+
+
+api:
+  client:
+    payment-gateway-url: ${PAYMENT_GATEWAY_API}
