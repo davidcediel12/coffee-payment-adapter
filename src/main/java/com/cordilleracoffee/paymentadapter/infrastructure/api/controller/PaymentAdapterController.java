@@ -19,9 +19,10 @@ public class PaymentAdapterController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.OK)
-    public Mono<PaymentResponse> performPayment(@RequestBody @Valid Mono<PaymentRequest> paymentRequest){
+    public Mono<PaymentResponse> performPayment(@RequestBody @Valid Mono<PaymentRequest> paymentRequest,
+                                                @RequestHeader("Idempotency-Key") String idempotencyKey) {
 
-        return performPaymentService.performPayment(paymentRequest);
+        return performPaymentService.performPayment(paymentRequest, idempotencyKey);
 
     }
 

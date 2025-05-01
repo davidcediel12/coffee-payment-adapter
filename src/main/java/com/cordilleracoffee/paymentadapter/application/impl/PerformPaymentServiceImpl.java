@@ -20,18 +20,19 @@ public class PerformPaymentServiceImpl implements PerformPaymentService {
     private final PaymentMapper paymentMapper;
 
     @Override
-    public Mono<PaymentResponse> performPayment(Mono<PaymentRequest> paymentRequest) {
+    public Mono<PaymentResponse> performPayment(Mono<PaymentRequest> paymentRequest, String idempotencyKey) {
 
         return paymentRequest
                 .map(paymentMapper::toGatewayRequest)
-                .flatMap(this::callPaymentGateway)
+                .flatMap(gatewayRequest -> callPaymentGateway(gatewayRequest, idempotencyKey))
                 .map(paymentMapper::toResponse);
 
 
     }
 
-    private Mono<PaymentGatewayResponse> callPaymentGateway(PaymentGatewayRequest gatewayRequest) {
+    private Mono<PaymentGatewayResponse> callPaymentGateway(PaymentGatewayRequest gatewayRequest, String idempotencyKey) {
         return webClient.post()
+                .header("Idempotency-Key", idempotencyKey)
                 .bodyValue(gatewayRequest)
                 .retrieve()
                 .bodyToMono(PaymentGatewayResponse.class);
