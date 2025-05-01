@@ -2,7 +2,16 @@ spring:
   application:
     name: paymentadapter
 
-
+resilience4j:
+  circuitbreaker:
+    instances:
+      paymentGateway:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        ignore-exceptions:
+          - com.cordilleracoffee.paymentadapter.application.exception.InvalidPaymentException
 
 api:
   client:

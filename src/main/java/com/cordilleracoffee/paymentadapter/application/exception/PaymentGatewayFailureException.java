@@ -5,13 +5,13 @@ import lombok.Getter;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 @Getter
-public class PaymentFailureException extends RuntimeException {
+public class PaymentGatewayFailureException extends RuntimeException {
 
     private final PaymentResponse paymentResponse;
     private final WebClientResponseException webClientResponseException;
 
-    public PaymentFailureException(String message, PaymentResponse paymentResponse,
-                                   WebClientResponseException webClientResponseException) {
+    public PaymentGatewayFailureException(String message, PaymentResponse paymentResponse,
+                                          WebClientResponseException webClientResponseException) {
         super(message, webClientResponseException);
         this.paymentResponse = paymentResponse;
         this.webClientResponseException = webClientResponseException;
