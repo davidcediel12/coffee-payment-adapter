@@ -36,11 +36,13 @@ public class PerformPaymentServiceImpl implements PerformPaymentService {
 
         return paymentRequest
                 .map(paymentMapper::toGatewayRequest)
-                .flatMap(gatewayRequest ->
-                        reactiveCircuitBreaker.run(callPaymentGateway(gatewayRequest, idempotencyKey),
-                                this::openCircuit))
-                .retryWhen(Retry.backoff(3, Duration.ofMillis(500))
-                        .filter(PaymentGatewayFailureException.class::isInstance))
+                .flatMap(request -> {
+                            Mono<PaymentGatewayResponse> paymentCall = callPaymentGateway(request, idempotencyKey)
+                                    .retryWhen(Retry.backoff(3, Duration.ofMillis(500))
+                                            .filter(PaymentGatewayFailureException.class::isInstance));
+                            return reactiveCircuitBreaker.run(paymentCall, this::openCircuit);
+                        }
+                )
                 .map(paymentMapper::toResponse);
 
 
@@ -48,7 +50,7 @@ public class PerformPaymentServiceImpl implements PerformPaymentService {
 
     private Mono<PaymentGatewayResponse> callPaymentGateway(PaymentGatewayRequest gatewayRequest, String idempotencyKey) {
 
-        return webClient.post()
+        return Mono.defer(() -> webClient.post()
                 .header("Idempotency-Key", idempotencyKey)
                 .bodyValue(gatewayRequest)
                 .retrieve()
@@ -59,13 +61,13 @@ public class PerformPaymentServiceImpl implements PerformPaymentService {
                                                 paymentMapper.toResponse(errorResponse), response.statusCode()))))
                 .bodyToMono(PaymentGatewayResponse.class)
                 .doOnError(e ->
-                        log.error("Error calling payment gateway: {}", e.getMessage()));
+                        log.error("Error calling payment gateway: ", e)));
     }
 
 
     public Mono<PaymentGatewayResponse> openCircuit(Throwable throwable) {
 
-        if(throwable instanceof InvalidPaymentException) {
+        if (throwable instanceof InvalidPaymentException) {
             return Mono.error(throwable);
         }
 
