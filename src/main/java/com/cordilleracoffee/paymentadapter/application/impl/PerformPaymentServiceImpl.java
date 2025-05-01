@@ -18,6 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
+
+import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +39,8 @@ public class PerformPaymentServiceImpl implements PerformPaymentService {
                 .flatMap(gatewayRequest ->
                         reactiveCircuitBreaker.run(callPaymentGateway(gatewayRequest, idempotencyKey),
                                 this::openCircuit))
+                .retryWhen(Retry.backoff(3, Duration.ofMillis(500))
+                        .filter(PaymentGatewayFailureException.class::isInstance))
                 .map(paymentMapper::toResponse);
 
 
