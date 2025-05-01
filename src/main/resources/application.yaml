@@ -10,8 +10,10 @@ resilience4j:
         minimumNumberOfCalls: 5
         failureRateThreshold: 50
         waitDurationInOpenState: 10s
-        ignore-exceptions:
+        ignoreExceptions:
           - com.cordilleracoffee.paymentadapter.application.exception.InvalidPaymentException
+        ignore-exception-predicate:
+          - com.cordilleracoffee.paymentadapter.config.IgnoreExceptionPredicate
 
 api:
   client:

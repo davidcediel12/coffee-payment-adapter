@@ -49,9 +49,9 @@ public class PerformPaymentServiceImpl implements PerformPaymentService {
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, response ->
                         response.bodyToMono(PaymentGatewayResponse.class)
-                                .map(errorResponse ->
-                                        new InvalidPaymentException("Client error while calling payment gateway",
-                                                paymentMapper.toResponse(errorResponse), response.statusCode())))
+                                .flatMap(errorResponse ->
+                                        Mono.error(new InvalidPaymentException("Client error while calling payment gateway",
+                                                paymentMapper.toResponse(errorResponse), response.statusCode()))))
                 .bodyToMono(PaymentGatewayResponse.class)
                 .doOnError(e ->
                         log.error("Error calling payment gateway: {}", e.getMessage()));
@@ -59,6 +59,11 @@ public class PerformPaymentServiceImpl implements PerformPaymentService {
 
 
     public Mono<PaymentGatewayResponse> openCircuit(Throwable throwable) {
+
+        if(throwable instanceof InvalidPaymentException) {
+            return Mono.error(throwable);
+        }
+
         if (throwable instanceof WebClientResponseException e) {
             return Mono.error(new PaymentGatewayFailureException("Error performing payment",
                     paymentMapper.toResponse(e.getResponseBodyAs(PaymentGatewayResponse.class)), e));

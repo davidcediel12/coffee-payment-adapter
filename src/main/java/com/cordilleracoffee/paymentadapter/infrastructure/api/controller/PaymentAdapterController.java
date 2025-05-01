@@ -3,6 +3,7 @@ package com.cordilleracoffee.paymentadapter.infrastructure.api.controller;
 
 import com.cordilleracoffee.paymentadapter.application.PerformPaymentService;
 import com.cordilleracoffee.paymentadapter.application.exception.InvalidPaymentException;
+import com.cordilleracoffee.paymentadapter.application.exception.PaymentGatewayFailureException;
 import com.cordilleracoffee.paymentadapter.infrastructure.dto.PaymentRequest;
 import com.cordilleracoffee.paymentadapter.infrastructure.dto.PaymentResponse;
 import jakarta.validation.Valid;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;
@@ -29,8 +31,12 @@ public class PaymentAdapterController {
         return performPaymentService.performPayment(paymentRequest, idempotencyKey)
                 .map(ResponseEntity::ok)
                 .onErrorResume(InvalidPaymentException.class, e ->
+                        Mono.just(ResponseEntity.status(e.getHttpStatus())
+                                .body(e.getPaymentResponse())))
+                .onErrorResume(PaymentGatewayFailureException.class, e ->
                         Mono.just(new ResponseEntity<>(e.getPaymentResponse(),
-                                Optional.ofNullable(e.getHttpStatus())
+                                Optional.ofNullable(e.getWebClientResponseException())
+                                        .map(WebClientResponseException::getStatusCode)
                                         .orElse(HttpStatus.INTERNAL_SERVER_ERROR))));
 
     }
