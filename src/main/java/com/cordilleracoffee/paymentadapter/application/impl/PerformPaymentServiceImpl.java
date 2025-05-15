@@ -7,15 +7,14 @@ import com.cordilleracoffee.paymentadapter.application.dto.PaymentGatewayRespons
 import com.cordilleracoffee.paymentadapter.application.exception.InvalidPaymentException;
 import com.cordilleracoffee.paymentadapter.application.exception.PaymentGatewayFailureException;
 import com.cordilleracoffee.paymentadapter.application.mappers.PaymentMapper;
+import com.cordilleracoffee.paymentadapter.infrastructure.api.client.PaymentGatewayService;
 import com.cordilleracoffee.paymentadapter.infrastructure.dto.PaymentRequest;
 import com.cordilleracoffee.paymentadapter.infrastructure.dto.PaymentResponse;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreaker;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -27,9 +26,9 @@ import java.time.Duration;
 @Slf4j
 public class PerformPaymentServiceImpl implements PerformPaymentService {
 
-    private final WebClient webClient;
     private final PaymentMapper paymentMapper;
     private final ReactiveCircuitBreaker reactiveCircuitBreaker;
+    private final PaymentGatewayService paymentGatewayService;
 
     @Override
     public Mono<PaymentResponse> performPayment(Mono<PaymentRequest> paymentRequest, String idempotencyKey) {
@@ -50,18 +49,7 @@ public class PerformPaymentServiceImpl implements PerformPaymentService {
 
     private Mono<PaymentGatewayResponse> callPaymentGateway(PaymentGatewayRequest gatewayRequest, String idempotencyKey) {
 
-        return Mono.defer(() -> webClient.post()
-                .header("Idempotency-Key", idempotencyKey)
-                .bodyValue(gatewayRequest)
-                .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError, response ->
-                        response.bodyToMono(PaymentGatewayResponse.class)
-                                .flatMap(errorResponse ->
-                                        Mono.error(new InvalidPaymentException("Client error while calling payment gateway",
-                                                paymentMapper.toResponse(errorResponse), response.statusCode()))))
-                .bodyToMono(PaymentGatewayResponse.class)
-                .doOnError(e ->
-                        log.error("Error calling payment gateway: ", e)));
+        return paymentGatewayService.performPayment(gatewayRequest, idempotencyKey);
     }
 
 
